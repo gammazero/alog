@@ -63,7 +63,7 @@ The alog package was designed to be:
 
 ### Philosophy
 
-The design philosophy also adheres to most of the idead in this discussion:
+The design philosophy also follows most of the ideas in this discussion:
 
 https://dave.cheney.net/2015/11/05/lets-talk-about-logging
 
