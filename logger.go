@@ -1,9 +1,10 @@
 /*
 Package alog provides an asynchronous logger.
 
-The work of formatting messages and writing log entries to I/O is done by the
-logger's goroutine.  This concurrent goroutine relieves the application
-generating the log messages from having to wait for formatting and I/O.
+The alog package provides simple, fast asynchronous logging.  The work and time
+to format log messages and write them to I/O is done by an asynchronous
+goroutine, allowing the calling application to continue operating without
+waiting for logging.
 
 The alog package provides a StdLogger interface which is implemented by both a
 logger as well as the stdlib log.  Libraries that perform logging can use this
