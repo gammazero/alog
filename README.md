@@ -5,6 +5,8 @@ Asynchronous logging
 
 The alog package provides simple, fast asynchronous logging.  The work and time to format log messages and write them to I/O is done by an asynchronous goroutine, allowing the calling application to continue operating without waiting for logging. 
 
+A Logger instance generates lines of output to an io.Writer.  Each logging operation makes a single call to the Writer's Write method.  A Logger can be used simultaneously from multiple goroutines; it guarantees serialized access to the Writer.
+
 ## Example
 
 Using `alog` is a easy as using the stdlib logger: create an instance and start logging messages.
@@ -36,20 +38,10 @@ It is recommended that packages that want to use asynchronous logging create a g
 ```go
 package main
 
-import (
-    "github.com/gammazero/alog"
-)
+import "github.com/gammazero/alog"
 
-// Log can be reassigned a stdlib *Logger.
-var log = alog.New(os.Stdout, "", "")
-
-func main() {
-    defer func() {
-        if logger, ok := log.(*alog.Logger); ok {
-            logger.Close()
-        }
-    }()
-}
+// Log can be assigned a *alog.Logger or a stdlib *Logger.
+var log = alog.StdLogger
 ```
 
 ## Design

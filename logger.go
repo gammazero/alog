@@ -13,20 +13,6 @@ interchangeably.
 
 Using alog requires creating a logger instance.  There is no default logger
 since the asynchronous logging requires a separate goroutine.
-
-For compatibility with the stdlib logger, create a global alog instance
-named `log`:
-
-    // Log can be reassigned a stdlib *Logger.
-    var log = alog.New(os.Stdout, "", "")
-
-    func main() {
-        defer func() {
-            if logger, ok := log.(*alog.Logger); ok {
-                logger.Close()
-            }
-        }()
-    }
 */
 package alog
 
@@ -38,7 +24,8 @@ import (
 	"time"
 )
 
-// StdLogger is an interface implemented by both alog.Logger and stdlib log.Logger.  This allows both implementations to be used interchangeably.
+// StdLogger is an interface implemented by both alog.Logger and stdlib
+// log.Logger.  This allows both implementations to be used interchangeably.
 type StdLogger interface {
 	// Panic, Panicln, and Panicf log a message and then call panic() with the
 	// message.  Arguments are handled in the manner of fmt.Print, fmt.Println,
@@ -91,7 +78,7 @@ func New(out io.Writer, prefix, timeLayout string) *Logger {
 	return a
 }
 
-// entry represents a single log entry that has not yet been written
+// entry represents a single log entry that has not yet been written.
 type entry struct {
 	ts     time.Time
 	format string
@@ -102,7 +89,7 @@ type entry struct {
 // A Logger represents an active logging object that generates lines of output
 // to an io.Writer.  Each logging operation makes a single call to the Writer's
 // Write method.  A Logger can be used simultaneously from multiple goroutines;
-// it guarantees to serialize access to the Writer.
+// it guarantees serialized access to the Writer.
 type Logger struct {
 	out      io.Writer
 	buf      []byte
