@@ -29,14 +29,16 @@ import (
 type StdLogger interface {
 	// Panic, Panicln, and Panicf log a message and then call panic() with the
 	// message.  Arguments are handled in the manner of fmt.Print, fmt.Println,
-	// and fmt.Printf respectively.
+	// and fmt.Printf respectively.  These are provided to allow alog.Logger to
+	// serve as a replacement for stdlib log.Logger.
 	Panic(v ...interface{})
 	Panicln(v ...interface{})
 	Panicf(format string, v ...interface{})
 
 	// Fatal, Fatalln, and Fatalf log a message and then call os.Exit(1).
 	// Arguments are handled in the manner of fmt.Print, fmt.Println, and
-	// fmt.Printf respectively.
+	// fmt.Printf respectively.  These are provided to allow alog.Logger to
+	// serve as a replacement for stdlib log.Logger.
 	Fatal(v ...interface{})
 	Fatalln(v ...interface{})
 	Fatalf(format string, v ...interface{})
@@ -58,7 +60,7 @@ const defaultTimeLayout = "Jan 02 15:04:05"
 // more spaces.
 func New(out io.Writer, prefix, timeLayout string) *Logger {
 	if out == nil {
-		out = os.Stderr
+		out = os.Stdout
 	}
 
 	if timeLayout == "" {

@@ -84,3 +84,5 @@ Debug log messages are things that developers care about when they are developin
 There should not be an option to turn informational logging off as the user should only be told things which are useful for them.
 
 Specific log data can be searched for by any number of tools.  If some form of categorization is needed, this is best left to the application creating log content, to include some identifier in the log message, instead of the log library trying to guess how the caller may want to include such information.
+
+NOTE: The alog package does provide Panic and Fatal functions, but these are provided only to allow alog.Logger to serve as a drop-in replacement for stdlib log.Logger.
