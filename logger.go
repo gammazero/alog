@@ -30,7 +30,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"runtime"
 	"strings"
 	"time"
 )
@@ -177,11 +176,8 @@ func newLogger(out io.Writer, level Level, timeLayout string) *logger {
 		level:    level,
 		tsLayout: timeLayout,
 	}
-	runtime.SetFinalizer(a, closeLogger)
 	return a
 }
-
-func closeLogger(a *logger) { close(a.entChan) }
 
 // entry represents a single log entry that has not yet been written
 type entry struct {
