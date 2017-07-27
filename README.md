@@ -1,15 +1,20 @@
 # alog
-Asynchronous logging
+Asynchronous structured leveled logging
 
 [![GoDoc](https://godoc.org/github.com/gammazero/alog?status.svg)](https://godoc.org/github.com/gammazero/alog)
 
-The alog package provides simple, fast asynchronous logging.  The work and time to format log messages and write them to I/O is done by an asynchronous goroutine, allowing the calling application to continue operating without waiting for logging. 
+The alog package provides structured logging with JSON output and with semi-structured text-based logging.  Logging is asynchronous, where work and time to format log messages and write them to I/O is done by an asynchronous goroutine, minimizing the time the application waits for a log call to return.  Decisions to log in a normal, especially a performance critical, code path should still be
+carefully considered.
 
 A Logger instance generates lines of output to an io.Writer.  Each logging operation makes a single call to the Writer's Write method.  A Logger can be used simultaneously from multiple goroutines; it guarantees serialized access to the Writer.
 
+The use of structured and leveled logging is completely optional.  Leveled logging is disabled by specifying `alog.NoLevel` when creating a new logger instance.  If considering using leveled logging, please read this discussion: 
+
+https://dave.cheney.net/2015/11/05/lets-talk-about-logging
+
 ## Example
 
-Using `alog` is a easy as using the stdlib logger: create an instance and start logging messages.
+Using `alog` is simple: create an instance and start logging messages.
 
 ```go
 package main
@@ -19,70 +24,52 @@ import (
 )
 
 func main() {
-    logger := alog.New(os.Stderr, "", "")
-    logger.Print("hello world")
+    logger := alog.NewText(nil, alog.InfoLevel, "", "")
+    logger.LevelPrint(InfoLevel, "hello world")
+    logger.WithFields(map[string]interface{}{
+        "hero": "rick",
+        "sidekick": "morty",
+    }).Error("Portal malfunction")
     logger.Close()
 }
 ```
 
+By default, logs are written to stdout (when a `nil` `io.Writer` is specified).
+
+## Log Format
+The default logging output is semi-structured text based.  The above produces this output:
+
+```text
+Jul 22 02:43:36 INFO hello world 
+Jul 22 02:43:36 ERROR Portal malfunction (hero=rick) (sidekick=morty)
+```
+
+You can output log data as structured JSON:
+
+```go
+    logger := alog.NewJSON(os.Stderr, alog.DebugLevel, "")
+    ...
+```
+
+Using that in the first block of code will produce the output:
+
+```json
+{"level":"info","msg":"hello world","time":"Jul 22 02:43:36"}
+{"hero":"rick","level":"error","msg":"Portal malfunction","sidekick":"morty","time":"Jul 22 02:43:36"}
+```
+
 ## Default Logger
 
-Using `alog` requires creating a `Logger` instance.  There is no default logger since the asynchronous logging must run a separate goroutine.
+Using alog requires creating a logger instance.  There is no default logger since the asynchronous logging must run a separate goroutine.  To use alog in a manner similar to the default logger create a global alog instance named `log`:
+
+```go
+    var log = alog.NewText(os.Stdout, alog.NoLevel, time.RFC3339,"")
+
+    func main() {
+        defer log.Close()
+    }
+```
 
 ## Compatibility
 
-The `alog.StdLogger` is implemented by both `alog.Logger` and the stdlib `log.Logger`.  This allows code to that uses `alog.StdLogger` to work with either implementation interchangeably.
-
-It is recommended that packages that want to use asynchronous logging create a global instance of alog.StdLogger, which can be assigned an instance of `alog.Logger` or stdlib `log.Logger`.
-
-```go
-package main
-
-import "github.com/gammazero/alog"
-
-// Log can be assigned a *alog.Logger or a stdlib *Logger.
-var log = alog.StdLogger
-```
-
-## Design
-
-The alog package was designed to be:
-
-- Compatible with the stdlib `log` package.
-- Simple (few options, minimal interface).
-- Fast (asynchronous, no complicated steps to generating a log entry).
-
-
-### Philosophy
-
-The design philosophy also follows most of the ideas in this discussion:
-
-https://dave.cheney.net/2015/11/05/lets-talk-about-logging
-
-#### No Severity Levels (paraphrasing above)
-
-##### No Warning Level
-
-"Eliminate the warning level, it's either an informational message, or an error condition."
-
-##### No Fatal or Panic Level
-
-"In effect, log.Fatal is a less verbose than, but semantically equivalent to, panic. It is commonly accepted that libraries should not use panic...  Don't log at fatal level, prefer instead to return an error to the caller."
-
-##### No Error Level
-
-"You should never be logging anything at error level because you should either handle the error, or pass it back to the caller."
-
-"If you choose to handle the error by logging it, by definition it's not an error any more - you handled it. The act of logging an error handles the error, hence it is no longer appropriate to log it as an error."
-
-##### No Debug Level
-
-Debug log messages are things that developers care about when they are developing or debugging software.  Generating these messages, including extra work to gather/calculate content for these message, should not be part of normal program execution.  Therefore, enabling or disabling debug should be done at the application level as it may need to enable/disable more then simply logging the messages.  So, the logger has no real need for debug level.
-
-##### No need filter by severity level
-
-There should not be an option to turn informational logging off as the user should only be told things which are useful for them.
-
-Specific log data can be searched for by any number of tools.  If some form of categorization is needed, this is best left to the application creating log content, to include some identifier in the log message, instead of the log library trying to guess how the caller may want to include such information.
-
-NOTE: The alog package does provide Panic and Fatal functions, but these are provided only to allow alog.Logger to serve as a drop-in replacement for stdlib log.Logger.
+For compatibility with the stdlib logger, a alog instance provides a limited set of compatible logging functions.

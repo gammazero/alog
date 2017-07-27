@@ -12,10 +12,10 @@ type junk struct {
 	baz float64
 }
 
-func BenchmarkLoggerVsLog(b *testing.B) {
+func BenchmarkLogger(b *testing.B) {
+	lg := NewText(ioutil.Discard, NoLevel, "", "")
+	lg2 := NewText(ioutil.Discard, NoLevel, "", "")
 	j := junk{42, "xyzzy", 3.14159}
-	lg := New(ioutil.Discard, "", "")
-	lg2 := New(ioutil.Discard, "", "")
 
 	words := []string{"for", "score", "and", "seven", "years", "ago"}
 	b.ResetTimer()
@@ -33,10 +33,10 @@ func BenchmarkLoggerVsLog(b *testing.B) {
 	lg.Close()
 }
 
-func BenchmarkLog(b *testing.B) {
-	j := junk{42, "xyzzy", 3.14159}
+func BenchmarkStdlibLog(b *testing.B) {
 	lg := log.New(ioutil.Discard, "stdlog", log.LstdFlags)
 	lg2 := log.New(ioutil.Discard, "stdlog", log.LstdFlags)
+	j := junk{42, "xyzzy", 3.14159}
 
 	words := []string{"for", "score", "and", "seven", "years", "ago"}
 	b.ResetTimer()
