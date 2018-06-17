@@ -25,7 +25,7 @@ import (
 
 func main() {
     logger := alog.NewText(nil, alog.InfoLevel, "", "")
-    logger.LevelPrint(InfoLevel, "hello world")
+    logger.Info("hello world")
     logger.WithFields(map[string]interface{}{
         "hero": "rick",
         "sidekick": "morty",
