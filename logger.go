@@ -31,6 +31,7 @@ import (
 	"io"
 	"os"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -151,9 +152,15 @@ const (
 	extMsgField   = "fields.msg"
 	timeField     = "time"
 	extTimeField  = "fields.time"
+
+	defaultTimeLayout = "Jan 02 15:04:05"
 )
 
-const defaultTimeLayout = "Jan 02 15:04:05"
+var entryPool = sync.Pool{
+	New: func() interface{} {
+		return new(entry)
+	},
+}
 
 func newLogger(out io.Writer, level Level, timeLayout string) *logger {
 	if out == nil {
@@ -201,15 +208,26 @@ type logger struct {
 }
 
 func (a *logger) Print(v ...interface{}) {
-	a.entChan <- &entry{ts: time.Now(), args: v}
+	ent := entryPool.Get().(*entry)
+	ent.ts = time.Now()
+	ent.args = v
+	a.entChan <- ent
 }
 
 func (a *logger) Println(v ...interface{}) {
-	a.entChan <- &entry{ts: time.Now(), args: v, ln: true}
+	ent := entryPool.Get().(*entry)
+	ent.ts = time.Now()
+	ent.args = v
+	ent.ln = true
+	a.entChan <- ent
 }
 
 func (a *logger) Printf(format string, v ...interface{}) {
-	a.entChan <- &entry{ts: time.Now(), format: format, args: v}
+	ent := entryPool.Get().(*entry)
+	ent.ts = time.Now()
+	ent.format = format
+	ent.args = v
+	a.entChan <- ent
 }
 
 func (a *logger) WithFields(fields Fields) Logger {
@@ -235,6 +253,12 @@ func (a *logger) Close() {
 func (a *logger) run() {
 	for ent := range a.entChan {
 		a.writeFunc(ent)
+		ent.level = 0
+		ent.format = ""
+		ent.args = nil
+		ent.fields = nil
+		ent.ln = false
+		entryPool.Put(ent)
 	}
 	close(a.doneChan)
 }
@@ -424,36 +448,36 @@ func (a *logger) log(fields Fields, level Level, v []interface{}) {
 	if !a.LogableAt(level) {
 		return
 	}
-	a.entChan <- &entry{
-		ts:     time.Now(),
-		level:  level,
-		args:   v,
-		fields: fields,
-	}
+	ent := entryPool.Get().(*entry)
+	ent.ts = time.Now()
+	ent.level = level
+	ent.args = v
+	ent.fields = fields
+	a.entChan <- ent
 }
 func (a *logger) logln(fields Fields, level Level, v []interface{}) {
 	if !a.LogableAt(level) {
 		return
 	}
-	a.entChan <- &entry{
-		ts:     time.Now(),
-		level:  level,
-		args:   v,
-		fields: fields,
-		ln:     true,
-	}
+	ent := entryPool.Get().(*entry)
+	ent.ts = time.Now()
+	ent.level = level
+	ent.args = v
+	ent.fields = fields
+	ent.ln = true
+	a.entChan <- ent
 }
 func (a *logger) logf(fields Fields, level Level, format string, v []interface{}) {
 	if !a.LogableAt(level) {
 		return
 	}
-	a.entChan <- &entry{
-		ts:     time.Now(),
-		level:  level,
-		format: format,
-		args:   v,
-		fields: fields,
-	}
+	ent := entryPool.Get().(*entry)
+	ent.ts = time.Now()
+	ent.level = level
+	ent.format = format
+	ent.args = v
+	ent.fields = fields
+	a.entChan <- ent
 }
 
 func (a *logger) LogableAt(level Level) bool {
