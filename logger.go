@@ -158,7 +158,9 @@ const (
 
 var entryPool = sync.Pool{
 	New: func() interface{} {
-		return new(entry)
+		ent := new(entry)
+		ent.reset()
+		return ent
 	},
 }
 
@@ -196,8 +198,17 @@ type entry struct {
 	ln     bool
 }
 
+func (e *entry) reset() {
+	if !e.ts.IsZero() {
+		e.level = 0
+		e.format = ""
+		e.args = nil
+		e.fields = nil
+		e.ln = false
+	}
+}
+
 type logger struct {
-	buf       []byte
 	entChan   chan *entry
 	doneChan  chan struct{}
 	writeFunc func(*entry)
@@ -253,47 +264,42 @@ func (a *logger) Close() {
 func (a *logger) run() {
 	for ent := range a.entChan {
 		a.writeFunc(ent)
-		ent.level = 0
-		ent.format = ""
-		ent.args = nil
-		ent.fields = nil
-		ent.ln = false
 		entryPool.Put(ent)
 	}
 	close(a.doneChan)
 }
 
 func (a *logger) writeText(ent *entry) {
-	a.buf = a.buf[:0]
+	var buf []byte
+
 	if a.prefix != "" {
-		a.buf = append(a.buf, a.prefix...)
+		buf = append(buf, a.prefix...)
 	}
 	if a.tsLayout != "" {
-		a.buf = append(a.buf, ent.ts.Format(a.tsLayout)...)
+		buf = append(buf, ent.ts.Format(a.tsLayout)...)
 	}
 	if a.level != NoLevel && ent.level != NoLevel {
-		a.buf = append(a.buf, levelNamesText[int(ent.level)]...)
+		buf = append(buf, levelNamesText[int(ent.level)]...)
 	} else {
-		a.buf = append(a.buf, ' ')
+		buf = append(buf, ' ')
 	}
 	if ent.format != "" {
-		a.buf = append(a.buf, fmt.Sprintf(ent.format, ent.args...)...)
+		buf = append(buf, fmt.Sprintf(ent.format, ent.args...)...)
 	} else if ent.ln {
-		a.buf = append(a.buf, fmt.Sprintln(ent.args...)...)
-		a.buf = a.buf[:len(a.buf)-1]
+		buf = append(buf, fmt.Sprintln(ent.args...)...)
+		buf = buf[:len(buf)-1]
 	} else {
-		a.buf = append(a.buf, fmt.Sprint(ent.args...)...)
+		buf = append(buf, fmt.Sprint(ent.args...)...)
 	}
 	for k, v := range ent.fields {
-		a.buf = append(a.buf, " ("...)
-		a.buf = append(a.buf, k...)
-		a.buf = append(a.buf, '=')
-		a.buf = append(a.buf, fmt.Sprint(v)...)
-		a.buf = append(a.buf, ')')
+		buf = append(buf, " ("...)
+		buf = append(buf, k...)
+		buf = append(buf, '=')
+		buf = append(buf, fmt.Sprint(v)...)
+		buf = append(buf, ')')
 	}
 
-	a.buf = append(a.buf, '\n')
-	a.out.Write(a.buf)
+	a.out.Write(append(buf, '\n'))
 }
 
 func (a *logger) writeJSON(ent *entry) {
@@ -481,8 +487,5 @@ func (a *logger) logf(fields Fields, level Level, format string, v []interface{}
 }
 
 func (a *logger) LogableAt(level Level) bool {
-	if a.level != NoLevel && a.level < level {
-		return false
-	}
-	return true
+	return a.level == NoLevel || a.level >= level
 }

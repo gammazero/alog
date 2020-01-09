@@ -59,7 +59,7 @@ func TestFields(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 	s = string(buf.Next(4096))
 	if !strings.Contains(s, "(foo=bar) (baz=quz)") && !strings.Contains(s, "(baz=quz) (foo=bar)") {
-		t.Fatal("missing or badly formatter fields in message:", s)
+		t.Fatal("missing or badly formatted fields in message:", s)
 	}
 	if strings.Contains(s, "(July=7)") || strings.Contains(s, "(December=12)") {
 		t.Fatal("log has fields that should not be there")
